@@ -6,9 +6,13 @@ app = Flask(__name__)
 from flask import request
 
 
+@app.route('/', methods=['GET'])
+def home():
+    return 'hey dawg'
+
+
 @app.route('/deploy', methods=['GET', 'POST'])
 def deploy():
-    print request.form
     return request.method
 
 if __name__ == '__main__':
