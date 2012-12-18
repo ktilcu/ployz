@@ -7,7 +7,7 @@ app = Flask(__name__)
 
 from flask import request
 
-@app.route('/deploy', methods=['GET', 'POST'])
+@app.route('/', methods=['GET', 'POST'])
 def deploy():
     return request.method
 
