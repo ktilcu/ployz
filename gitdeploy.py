@@ -33,9 +33,13 @@ def get_db():
 
 
 def query_db(query, args=(), one=False):
-    cur = g.db.execute(query, args)
+    try:
+        cur = g.db.execute(query, args)
+    except:
+        init_db()
+        query_db(query)
     rv = [dict((cur.description[idx][0], value)
-               for idx, value in enumerate(row)) for row in cur.fetchall()]
+    for idx, value in enumerate(row)) for row in cur.fetchall()]
     return (rv[0] if rv else None) if one else rv
 
 
@@ -51,8 +55,7 @@ def teardown_request(exception):
 
 @app.route('/')
 def viewPloyz():
-    cur = g.db.execute('select * from ployz')
-    entries = [dict(id=row[0], message=row[1], time=row[2]) for row in cur.fetchall()]
+    entries = query_db('select * from ployz')
     print entries
     return render_template('showall.html', ployz=entries)
 
@@ -61,11 +64,11 @@ def viewPloyz():
 def add_ploy():
     if request.method == 'POST':
         db = get_db()
-        post_data = request.form
+        post_data = request.form['message']
         if request.headers['Content-Type'] == 'application/json':
-            post_data = request.json
+            post_data = request.json['repository']['description']
         print post_data
-        db.execute('insert into ployz (message) values (?)', [post_data['repository']['description']])
+        db.execute('insert into ployz (message) values (?)', [post_data])
         db.commit()
         flash('New Commit Posted')
     return redirect(url_for('viewPloyz'))
