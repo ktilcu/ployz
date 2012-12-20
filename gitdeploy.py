@@ -1,7 +1,8 @@
 #!/usr/bin/python
 
-from flask import Flask, request, g, render_template, flash, redirect, url_for, _app_ctx_stack, json
+from flask import Flask, request, g, render_template, flash, redirect, url_for, _app_ctx_stack
 from sqlite3 import dbapi2 as sqlite3
+import time
 
 import os
 # import sqlite3
@@ -57,7 +58,7 @@ def teardown_request(exception):
 def viewPloyz():
     entries = query_db('select * from ployz')
     print entries
-    return render_template('showall.html', ployz=entries)
+    return render_template('showall.html', ployz=sorted(entries, key=lambda ploy: time.strptime(ploy['time'], '%Y-%m-%d %H:%M:%S'), reverse=True))
 
 
 @app.route('/add', methods=['GET', 'POST'])
