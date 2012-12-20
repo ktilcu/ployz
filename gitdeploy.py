@@ -1,12 +1,10 @@
 #!/usr/bin/python
 
-from flask import Flask
-from flask import request
-# For creating the database
-from contextlib import closing
+from flask import Flask, request, g, render_template, flash, redirect, url_for, _app_ctx_stack, json
+from sqlite3 import dbapi2 as sqlite3
 
 import os
-import sqlite3
+# import sqlite3
 
 DATABASE = 'ployz.db'
 DEBUG = True
@@ -16,15 +14,22 @@ app = Flask(__name__)
 app.config.from_object(__name__)
 
 
-def connect_db():
-    return sqlite3.connect(app.config['DATABASE'])
-
-
 def init_db():
-    with closing(connect_db()) as db:
+    with app.app_context():
+        db = get_db()
         with app.open_resource('schema.sql') as f:
             db.cursor().executescript(f.read())
         db.commit()
+
+
+def get_db():
+    """Opens a new database connection if there is none yet for the
+    current application context.
+    """
+    top = _app_ctx_stack.top
+    if not hasattr(top, 'sqlite_db'):
+        top.sqlite_db = sqlite3.connect(app.config['DATABASE'])
+    return top.sqlite_db
 
 
 def query_db(query, args=(), one=False):
@@ -36,7 +41,7 @@ def query_db(query, args=(), one=False):
 
 @app.before_request
 def before_request():
-    g.db = connect_db()
+    g.db = get_db()
 
 
 @app.teardown_request
@@ -44,15 +49,26 @@ def teardown_request(exception):
     g.db.close()
 
 
-@app.route('/', methods=['POST'])
-def deploy():
-    return request.method
-
-
-@app.route('/', methods=['GET'])
+@app.route('/')
 def viewPloyz():
-    fullList = query_db('select * from ployz')
-    return fullList
+    cur = g.db.execute('select * from ployz')
+    entries = [dict(id=row[0], message=row[1], time=row[2]) for row in cur.fetchall()]
+    print entries
+    return render_template('showall.html', ployz=entries)
+
+
+@app.route('/add', methods=['GET', 'POST'])
+def add_ploy():
+    if request.method == 'POST':
+        db = get_db()
+        post_data = request.form
+        if request.headers['Content-Type'] == 'application/json':
+            post_data = request.json
+        print post_data
+        db.execute('insert into ployz (message) values (?)', [post_data['repository']['description']])
+        db.commit()
+        flash('New Commit Posted')
+    return redirect(url_for('viewPloyz'))
 
 
 if __name__ == '__main__':
