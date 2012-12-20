@@ -1,3 +1,4 @@
 gitdeploy
 *.pyc
 ployz.db
+*.DS_Store
